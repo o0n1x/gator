@@ -72,6 +72,35 @@ func HandlerRegister(s *State, cmd Command) error {
 	return nil
 }
 
+func HandlerAddFeed(s *State, cmd Command) error {
+	if len(cmd.Args) < 2 {
+		return errors.New("expected arg 'name' and 'url' but was not found")
+	}
+	name := cmd.Args[0]
+	url := cmd.Args[1]
+
+	user, err := s.DB.GetUser(context.Background(), s.State.CurrentUserName)
+	if err != nil {
+		fmt.Printf("Error registering feed as User %v is not found. Error: %v", name, err)
+		os.Exit(1)
+	}
+
+	feed, err := s.DB.CreateFeed(context.Background(), database.CreateFeedParams{
+		ID:        uuid.New(),
+		CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
+		UpdatedAt: sql.NullTime{Time: time.Now(), Valid: true},
+		Name:      sql.NullString{String: name, Valid: true},
+		Url:       sql.NullString{String: url, Valid: true},
+		UserID:    uuid.NullUUID{UUID: user.ID, Valid: true},
+	})
+	if err != nil {
+		fmt.Printf("Error registering feed as User %v . Error: %v", name, err)
+		os.Exit(1)
+	}
+	fmt.Printf("Created Feed:\nName: %v\nURL: %v\nUsername: %v", feed.Name, feed.Url, user.Name)
+	return nil
+}
+
 func HandlerReset(s *State, cmd Command) error {
 	err := s.DB.DeleteUsers(context.Background())
 	if err != nil {
