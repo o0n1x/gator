@@ -72,18 +72,12 @@ func HandlerRegister(s *State, cmd Command) error {
 	return nil
 }
 
-func HandlerAddFeed(s *State, cmd Command) error {
+func HandlerAddFeed(s *State, cmd Command, user database.User) error {
 	if len(cmd.Args) < 2 {
 		return errors.New("expected arg 'name' and 'url' but was not found")
 	}
 	name := cmd.Args[0]
 	url := cmd.Args[1]
-
-	user, err := s.DB.GetUser(context.Background(), s.State.CurrentUserName)
-	if err != nil {
-		fmt.Printf("Error registering feed as User %v is not found. Error: %v", name, err)
-		os.Exit(1)
-	}
 
 	feed, err := s.DB.CreateFeed(context.Background(), database.CreateFeedParams{
 		ID:        uuid.New(),
@@ -167,16 +161,12 @@ func HandlerFeeds(s *State, cmd Command) error {
 	return nil
 }
 
-func HandlerFollow(s *State, cmd Command) error {
+func HandlerFollow(s *State, cmd Command, user database.User) error {
 	if len(cmd.Args) < 1 {
 		return errors.New("expected arg 'url' but was not found")
 	}
 	url := cmd.Args[0]
-	user, err := s.DB.GetUser(context.Background(), s.State.CurrentUserName)
-	if err != nil {
-		fmt.Printf("Error following, User with name: %v does not exist\n", s.State.CurrentUserName)
-		os.Exit(1)
-	}
+
 	feed, err := s.DB.GetFeedByURL(context.Background(), sql.NullString{String: url, Valid: true})
 	if err != nil {
 		fmt.Printf("Error following, feed with url: %v does not exist\n", url)
@@ -199,12 +189,8 @@ func HandlerFollow(s *State, cmd Command) error {
 
 }
 
-func HandlerFollowing(s *State, cmd Command) error {
-	user, err := s.DB.GetUser(context.Background(), s.State.CurrentUserName)
-	if err != nil {
-		fmt.Printf("Error list follows, User with name: %v does not exist\n", s.State.CurrentUserName)
-		os.Exit(1)
-	}
+func HandlerFollowing(s *State, cmd Command, user database.User) error {
+
 	feeds, err := s.DB.GetFeedFollowsForUser(context.Background(), uuid.NullUUID{UUID: user.ID, Valid: true})
 	if err != nil {
 		fmt.Printf("DB Error for list follows,\nError: %v\n", err)
