@@ -6,10 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
 
+	"github.com/fatih/color"
 	"github.com/o0n1x/aggreGator/internal/config"
 	"github.com/o0n1x/aggreGator/internal/database"
 	"github.com/o0n1x/aggreGator/internal/rss"
@@ -179,17 +181,53 @@ func scrapeFeeds(s *State, duration time.Duration) {
 		os.Exit(1)
 	}
 
-	//printing rss
-	fmt.Printf("Channel Title: %v\n", rss.Channel.Title)
-	//fmt.Printf("Channel Description:\n%v\n",rss.Channel.Description)
-	fmt.Printf("Feeds:\n\n")
 	for _, rssitem := range rss.Channel.Item {
-		fmt.Printf("Feed Title: %v\n", rssitem.Title)
-		fmt.Printf("Feed Publish Date: %v\n", rssitem.PubDate)
-		//fmt.Printf("\n%v\n\n",rssitem.Description)
+		pubdate, err := parsePublishedAt(rssitem.PubDate)
+
+		if err != nil {
+			fmt.Printf("Error parsing time %v: %v\n", rssitem.PubDate, err)
+			os.Exit(1)
+		}
+		_, err = s.DB.CreatePost(context.Background(), database.CreatePostParams{
+			ID:          uuid.New(),
+			CreatedAt:   sql.NullTime{Time: time.Now(), Valid: true},
+			UpdatedAt:   sql.NullTime{Time: time.Now(), Valid: true},
+			Title:       sql.NullString{String: rssitem.Title, Valid: true},
+			Url:         sql.NullString{String: rssitem.Link, Valid: true},
+			Description: sql.NullString{String: rssitem.Description, Valid: true},
+			PublishedAt: sql.NullTime{Time: pubdate, Valid: true},
+			FeedID:      uuid.NullUUID{UUID: nextfeed.ID, Valid: true},
+		})
+		if err != nil {
+			fmt.Printf("Silenced Error couldnt insert post into dbms: %v\n", err)
+		}
 
 	}
 
+	//printing rss
+	fmt.Printf("Channel Title: %v\n", rss.Channel.Title)
+	//fmt.Printf("Channel Description:\n%v\n",rss.Channel.Description)
+	fmt.Printf("number of feeds fetched: %v\n", len(rss.Channel.Item))
+
+}
+
+var layouts = []string{
+	time.RFC1123Z,
+	time.RFC3339,
+	"02-01-2006", // dd-mm-yyyy
+	"01-02-2006", // mm-dd-yyyy
+}
+
+func parsePublishedAt(s string) (time.Time, error) {
+	var t time.Time
+	var err error
+	for _, layout := range layouts {
+		t, err = time.Parse(layout, s)
+		if err == nil {
+			return t.UTC(), nil
+		}
+	}
+	return time.Time{}, err
 }
 
 func HandlerFeeds(s *State, cmd Command) error {
@@ -273,6 +311,42 @@ func HandlerFollowing(s *State, cmd Command, user database.User) error {
 	for _, feed := range feeds {
 		fmt.Printf("* FeedName: %v \n  User: %v\n", feed.FeedName.String, feed.UserName)
 	}
+	return nil
+}
+
+func HandlerBrowse(s *State, cmd Command, user database.User) error {
+	limit := 2
+	if len(cmd.Args) > 0 {
+		n, err := strconv.Atoi(cmd.Args[0])
+		if err != nil {
+			fmt.Printf("invalid limit %v: %v\nDefaulted to 2\n", cmd.Args[0], err)
+			n = 2
+		}
+		if n > 20 {
+			fmt.Printf("invalid limit %v too large\nDefaulted to 2\n", cmd.Args[0])
+			n = 2
+		}
+		limit = n
+	}
+	posts, err := s.DB.GetPostsForUser(context.Background(), database.GetPostsForUserParams{
+		ID:    user.ID,
+		Limit: int32(limit),
+	})
+	if err != nil {
+		fmt.Printf("DB Error getting list of posts for user,\nError: %v\n", err)
+		os.Exit(1)
+	}
+
+	for _, post := range posts {
+		fmt.Printf("   -------------------- \n")
+		fmt.Printf(color.YellowString("Title: %v"), "")
+		fmt.Printf(color.GreenString("%v\n"), post.Title.String)
+		fmt.Printf("	Published Date: %v\n", post.PublishedAt.Time)
+		fmt.Printf("	URL: %v\n", post.Url.String)
+		fmt.Printf("	Description: %v\n", post.Description.String)
+
+	}
+	fmt.Printf("   --- End of Posts --- \n")
 	return nil
 }
 
