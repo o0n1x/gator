@@ -12,9 +12,9 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/fatih/color"
-	"github.com/o0n1x/aggreGator/internal/config"
-	"github.com/o0n1x/aggreGator/internal/database"
-	"github.com/o0n1x/aggreGator/internal/rss"
+	"github.com/o0n1x/gator/internal/config"
+	"github.com/o0n1x/gator/internal/database"
+	"github.com/o0n1x/gator/internal/rss"
 )
 
 type State struct {

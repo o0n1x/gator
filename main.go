@@ -6,9 +6,9 @@ import (
 	"os"
 
 	_ "github.com/lib/pq"
-	"github.com/o0n1x/aggreGator/internal/cli"
-	"github.com/o0n1x/aggreGator/internal/config"
-	"github.com/o0n1x/aggreGator/internal/database"
+	"github.com/o0n1x/gator/internal/cli"
+	"github.com/o0n1x/gator/internal/config"
+	"github.com/o0n1x/gator/internal/database"
 )
 
 func main() {
