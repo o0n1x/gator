@@ -1,7 +1,7 @@
 
-# Aggre**Gator**
+# Aggre*Gator*
 
-aggregator is a cli RSS aggregator. it uses PostGresSQL and Go to aggregate RSS feeds and store them for future browsing via CLI.
+Gator is a cli RSS aggregator. it uses PostGresSQL and Go to aggregate RSS feeds and store them for future browsing via CLI.
 
 # Installation and Usage:
 
